@@ -122,7 +122,7 @@ function CrayonArtwork({ illustration }: { illustration: Illustration }) {
     stroke.d.split(/(?=M)/).filter(Boolean).map((d) => ({ ...stroke, d })));
   return (
     <svg ref={ref} viewBox="0 0 260 240" fill="none" aria-hidden="true" focusable="false"
-      className={`crayon-artwork ${illustration.position}`}>
+      className={`${illustration.position} crayon-artwork`}>
       <defs>
         {/* Static pigment gaps: no animated noise, blur, or displacement. */}
         <filter id={`${id}-grain`} x="0" y="0" width="100%" height="100%">
@@ -159,10 +159,13 @@ function HeroSection() {
         {illustrations.map((illustration) => <CrayonArtwork key={illustration.name} illustration={illustration} />)}
       </div>
       <div className="crayon-hero-content">
-        <p className="mb-7 inline-flex items-center gap-3 font-mono text-xs tracking-[0.18em] text-fd-muted-foreground uppercase">
-          <span className="size-2 rounded-full bg-fd-primary" /> KOReader Plugin
+        <p className="
+          inline-flex gap-3 items-center
+          font-mono mb-7 text-fd-muted-foreground text-xs tracking-[0.18em] uppercase
+        ">
+          <span className="size-2 bg-fd-primary rounded-full" /> KOReader Plugin
         </p>
-        <h1 id="hero-title" className="mx-auto w-full max-w-xl">
+        <h1 id="hero-title" className="max-w-xl w-full mx-auto">
           <Image
             src="/assets/ink-away-title.svg"
             alt="Ink-away.koplugin"
@@ -179,18 +182,26 @@ function HeroSection() {
           aria-hidden="true"
           width={1000}
           height={54}
-          className="mx-auto mt-4 h-auto w-full max-w-3xl"
+          className="h-auto max-w-3xl w-full mt-4 mx-auto"
           unoptimized
         />
-        <p className="mx-auto mt-7 max-w-lg text-lg leading-relaxed text-fd-muted-foreground sm:text-xl">
+        <p className="max-w-lg leading-relaxed mt-7 mx-auto text-fd-muted-foreground text-lg sm:text-xl">
           Ink Away is a drawing, notes and book annotation app for KOReader, with palm rejection and pen pressure for stylus users.
         </p>
-        <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
-          <Link href="/docs" className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-fd-primary px-5 py-3 text-sm font-medium text-fd-primary-foreground transition-colors hover:bg-fd-primary/90 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-fd-ring">
-            Build an integration <ArrowRight size={16} />
+        <div className="flex flex-wrap gap-3 items-center justify-center mt-9">
+          <Link href="/docs" className="
+            inline-flex min-h-12 gap-2 items-center justify-center
+            bg-fd-primary focus-visible:outline-2 focus-visible:outline-fd-ring focus-visible:outline-offset-4 font-medium px-5 py-3 rounded-xl text-fd-primary-foreground text-sm transition-colors
+            hover:bg-fd-primary/90
+          ">
+            Read more...<ArrowRight size={16} />
           </Link>
-          <Link href="/docs#public-api" className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border bg-fd-background px-5 py-3 text-sm font-medium transition-colors hover:bg-fd-accent focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-fd-ring">
-            <BookOpen size={16} /> Explore the API
+          <Link href="/docs#public-api" className="
+            inline-flex min-h-12 gap-2 items-center justify-center
+            bg-fd-background border focus-visible:outline-2 focus-visible:outline-fd-ring focus-visible:outline-offset-4 font-medium px-5 py-3 rounded-xl text-sm transition-colors
+            hover:bg-fd-accent
+          ">
+            <BookOpen size={16} /> Source code
           </Link>
         </div>
       </div>

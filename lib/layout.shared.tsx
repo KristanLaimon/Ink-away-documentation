@@ -7,7 +7,6 @@ export function baseOptions(): BaseLayoutProps {
       // JSX supported
       title: appName,
     },
-    links: [{ text: 'Start here', url: '/docs' }, { text: 'API reference', url: '/docs#public-api' }],
     githubUrl: `https://github.com/${gitConfig.user}/${gitConfig.repo}`,
   };
 }
