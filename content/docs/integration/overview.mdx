@@ -1,0 +1,63 @@
+---
+title: "Connect your plugin"
+description: "Ink Away integration API v1: Connect your plugin."
+---
+
+Choose the role you need. Both mock Lua files live beside this document and
+handle registration **before or after Ink Away becomes ready**.
+
+| Consumer role | Example | What it provides |
+| --- | --- | --- |
+| Event-only | [main-event-only.lua](/examples/main-event-only.lua) | Subscribes to annotation-open/close events, without a viewer or surface. |
+| Rendering consumer | [main-rendering-consumer.lua](/examples/main-rendering-consumer.lua) | Injects a viewer/surface rendering dependency, with optional surface-scoped event callbacks. |
+
+A plugin can be **both**. These roles are shown separately to make each guide
+easy to follow. Event subscriptions do not require rendering registration.
+The rendering example already includes callbacks for its own surface; add
+independent subscriptions only if you also need reader-wide events.
+
+These are nonfunctional **YourPlugin documentation mocks**, not installable
+plugins or runtime modules. Their `init`, `configureInkAway` and cleanup methods are
+illustrative consumer methods, not a required KOReader plugin signature or
+additional Ink Away API methods.
+
+## Event-only consumer
+
+[main-event-only.lua](/examples/main-event-only.lua) takes only `ui`, the reader UI.
+It uses the plugin instance as a stable queue key. If Ink Away is ready it
+configures immediately; otherwise Ink Away calls the queued consumer’s `configureInkAway(ink)`
+after initialization. Neither path needs a viewer, surface or renderer.
+
+`configureInkAway` checks the event API version and subscribes with
+`onAnnotationOpened()` and `onAnnotationClosed()`. These observe this reader's
+sessions, including the native viewer, where `event.surface` is `nil`.
+`dispose()` cancels its own pending request or unsubscribes both listeners.
+It does not close the annotation session it observes.
+
+## Rendering consumer
+
+[main-rendering-consumer.lua](/examples/main-rendering-consumer.lua) takes `ui`,
+`viewer_widget` and `surface`. The latter two are created by your plugin:
+`viewer_widget` is its actual KOReader viewer object; `surface` is its
+[annotation adapter](/docs/surfaces/required). They are required for rendering
+injection, not for event-only consumers. The renderer is an empty mock;
+see the [minimal surface example](/docs/surfaces/required#minimal-surface-example) for geometry.
+
+Both loading orders lead to `installPluginIntegration()`, which registers the
+rendering provider and optional callbacks scoped to this surface. The viewer
+paints saved ink after its own background and can request annotation from its
+own action. Before destroying the viewer, it cancels its pending request or
+calls the returned cleanup, which releases the surface and removes registrations.
+
+## Shared lifecycle rules
+
+- Queue each consumer instance with a `true` entry. Disposal removes only
+  that instance's request.
+- Repeat the hookup for each new reader and dispose the old consumer's state.
+- Event-only listeners receive future events; subscription does not replay an
+  annotation session that is already open.
+- A close event does not confirm a successful disk save.
+- For rendering consumers, registration does not display the viewer: it must be
+  on KOReader's window stack before Ink Away can select it for annotation.
+- Rendering snapshots must exclude ink overlays to avoid recursive painting.
+  Replacement viewers must also follow the [handoff rules](/docs/surfaces/optional#surfaceturndirection-done-frame).

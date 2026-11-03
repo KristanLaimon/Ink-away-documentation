@@ -1,6 +1,10 @@
 {
   "title": "Documentation",
   "pages": [
-    "index"
+    "index",
+    "integration",
+    "api",
+    "surfaces",
+    "architecture"
   ]
 }

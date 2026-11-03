@@ -1,0 +1,41 @@
+---
+title: "ink:onAnnotationOpened(callback)"
+description: "Ink Away integration API v1: ink:onAnnotationOpened(callback)."
+---
+
+Subscribe to successful annotation-session opening for this reader, including
+sessions using the native KOReader viewer.
+
+**Parameters**
+
+| Name | Type | Required | Description |
+| --- | --- | --- | --- |
+| `callback` | function | Yes | Receives one [event payload](/docs/api/event-payload). Its return value is ignored. |
+
+**Returns**
+
+An idempotent `unsubscribe()` function with no parameters or result.
+
+**Behavior and edge cases**
+
+- Fires once after the annotation editor has been created and shown.
+- Repeating an open request while that editor is shown does not emit another
+  event. Navigation and toolbar reflow do not open a new session.
+- If the editor cannot be created/shown, or annotation cannot open, no open
+  event is emitted. A request alone is not a session.
+- There is no replay: subscribing after opening observes future openings only.
+- This event observes an opening; returning `false` does not cancel it.
+- Non-function callbacks raise a synchronous assertion. Listener exceptions are
+  logged and do not prevent the other listeners from running.
+
+**Example**
+
+```lua
+local unsubscribe = ink:onAnnotationOpened(function(event)
+    if event.surface then
+        logger.dbg("External-viewer annotation opened")
+    else
+        logger.dbg("Native-reader annotation opened")
+    end
+end)
+```

@@ -1,0 +1,42 @@
+---
+title: "ink:releaseDocumentSurface(surface)"
+description: "Ink Away integration API v1: ink:releaseDocumentSurface(surface)."
+---
+
+Save/close an active annotation editor using this exact surface before its
+owning viewer or surface resources are destroyed.
+
+**Parameters**
+
+| Name | Type | Required | Description |
+| --- | --- | --- | --- |
+| `surface` | valid external surface table | Yes | The exact surface object being released. Do not pass `nil`. |
+
+**Returns**
+
+`nil`. It does not return a persistence acknowledgement.
+
+**Behavior and edge cases**
+
+- Acts only when the active surface is the same Lua object. Equal fields on a
+  different table do not match. An unrelated or previously released surface
+  does not close the current session.
+- Uses Ink Away's normal close/save path and clears that surface selection.
+  This path also closes book notes if open.
+- Does not unregister your widget or unsubscribe your listeners. Do those
+  separately after release.
+- During navigation, keep the surface being handed to `done(surface)` alive.
+  Disposing of the outgoing widget must not close the session being transferred.
+  After handoff, release the final active surface when its viewer closes.
+- Provider `finish()` must tolerate the owning viewer already being closed.
+
+**Example**
+
+```lua
+-- For a manually managed low-level registration:
+ink:releaseDocumentSurface(surface)
+unregister()
+stop_open()
+stop_close()
+-- Now dispose of the widget's rendering resources.
+```

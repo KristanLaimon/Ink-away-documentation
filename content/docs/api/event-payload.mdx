@@ -1,0 +1,19 @@
+---
+title: "Event payload"
+description: "Ink Away integration API v1: Event payload."
+---
+
+Both lifecycle methods pass a table with these fields:
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `document` | document object | The actual reader document for this session. |
+| `surface` | surface table or `nil` | The consumer-owned surface, or `nil` for the native reader. |
+
+Callbacks run synchronously in registration order. Each receives a separate
+payload table; document and surface references are shared objects, not copies.
+No editor, canvas, storage model or registry object is included.
+
+Unsubscribing takes effect immediately, including during notification. Listeners
+added during notification wait until the next event. Keep callbacks brief and
+unsubscribe when disposing of your plugin's reader/viewer state.

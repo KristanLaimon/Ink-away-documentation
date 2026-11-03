@@ -1,0 +1,78 @@
+---
+title: "ink:registerRenderingView(widget, factory, on_error)"
+description: "Ink Away integration API v1: ink:registerRenderingView(widget, factory, on_error)."
+---
+
+Register one rendering provider for an owning widget. Ink Away evaluates its
+factory when it selects a viewer for a new annotation session.
+
+**Parameters**
+
+| Name | Type | Required | Description |
+| --- | --- | --- | --- |
+| `widget` | table | Yes | Your actual viewer widget, present on KOReader's window stack when eligible. |
+| `factory` | function | Yes | Called as `factory(widget, context)`; returns a surface or `nil`. |
+| `on_error` | function | No | Called as `on_error(err)` for reported provider failures. |
+
+Factory input:
+
+```lua
+context = {
+    document = ui.document, -- the actual currently open document object
+}
+```
+
+Factory output: a [surface](/docs/surfaces/required) whose `document` is that same
+object, or `nil` to decline. Matching filenames are insufficient: object identity
+must match. Keep returned geometry current throughout the session.
+
+**Returns**
+
+An `unregister()` function. It accepts no arguments, returns `nil`, and is safe
+to call repeatedly. It removes this registration only; it does not close an
+active editor or remove event subscriptions.
+
+**Selection rules and edge cases**
+
+- Widgets are examined from the top of the current window stack downward.
+- A registered factory takes precedence over that widget's legacy
+  `getAnnotationSurface()` method. Returning `nil` does not call that legacy
+  method on the same widget.
+- The first valid returned surface is selected. A declining widget allows the
+  search to continue unless it blocks the search as described below.
+- A fullscreen widget blocks the search below it when `covers_fullscreen` is
+  true and neither `toast` nor `invisible` is true. Its own provider is checked
+  before that blocking rule.
+- Registrations for widgets outside the stack are not considered. If a widget
+  stays in the stack while logically hidden, its factory should decline.
+- Different widgets may register independently. A second registration for the
+  **same widget** raises an assertion; unregister first before replacing it.
+- Factory exceptions or an invalid returned surface stop selection and use the
+  native reader. A failed selected provider is not replaced by a lower provider.
+- Unregister does not disable legacy discovery. If the widget still exposes
+  `getAnnotationSurface()`, it may remain discoverable until removed or disabled
+  by that consumer.
+- A registration belongs to this Ink Away instance. Create a new hookup for a
+  new reader/document lifecycle and release the old one.
+
+**Errors**
+
+Wrong argument types and duplicate registration raise synchronous Lua assertions.
+They are caller errors and do not call `on_error`. Factory/contract failures are
+reported to `on_error`, if supplied. The error value is not guaranteed to be a
+string; use `tostring(err)` for display. See [error handling](/docs/api/errors).
+
+**Example**
+
+```lua
+local unregister = ink:registerRenderingView(widget, function(_, context)
+    if context.document ~= surface.document then return nil end
+    return surface
+end, function(err)
+    logger.warn("Viewer provider:", tostring(err))
+end)
+
+-- Later, before destroying the widget:
+ink:releaseDocumentSurface(surface)
+unregister()
+```

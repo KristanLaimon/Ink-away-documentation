@@ -1,0 +1,39 @@
+---
+title: "ink:onAnnotationClosed(callback)"
+description: "Ink Away integration API v1: ink:onAnnotationClosed(callback)."
+---
+
+Subscribe to cleanup of an annotation session that successfully opened.
+
+**Parameters**
+
+| Name | Type | Required | Description |
+| --- | --- | --- | --- |
+| `callback` | function | Yes | Receives one [event payload](/docs/api/event-payload). Its return value is ignored. |
+
+**Returns**
+
+An idempotent `unsubscribe()` function with no parameters or result.
+
+**Behavior and edge cases**
+
+- Fires once after the normal save/cleanup path has been attempted and the
+  selected surface's `finish()` has been attempted, if supplied.
+- A close event is **not proof of a successful disk write**.
+- The payload contains the final surface after any navigation handoffs. It may
+  differ from the surface in the opening event.
+- Constructor/show failures do not invent a close event for a session that never
+  opened. Repeated cleanup does not produce repeated close notifications.
+- Native-reader sessions use `surface = nil`.
+- There is no replay or cancellation. Wrong callback types assert; callback
+  exceptions are logged and isolated.
+
+**Example**
+
+```lua
+local unsubscribe = ink:onAnnotationClosed(function(event)
+    if event.document == ui.document then
+        logger.dbg("Annotation session closed")
+    end
+end)
+```

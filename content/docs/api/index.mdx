@@ -1,0 +1,19 @@
+---
+title: "Public API"
+description: "Complete method and lifecycle reference for API v1."
+---
+
+Start with [conventions and readiness](/docs/api/conventions).
+
+| Method | Purpose |
+| --- | --- |
+| [installPluginIntegration](/docs/api/install-plugin-integration) | Register a surface and optional scoped listeners together. |
+| [registerRenderingView](/docs/api/register-rendering-view) | Register a rendering factory for a viewer. |
+| [onAnnotationOpened](/docs/api/on-annotation-opened) | Observe annotation opening without a viewer requirement. |
+| [onAnnotationClosed](/docs/api/on-annotation-closed) | Observe annotation closure without a viewer requirement. |
+| [paintDocumentSurface](/docs/api/paint-document-surface) | Paint saved ink over your own background. |
+| [releaseDocumentSurface](/docs/api/release-document-surface) | Release an owned surface. |
+| [onInkAwayAnnotate](/docs/api/annotate) | Request the existing annotation action. |
+
+See also [event payloads](/docs/api/event-payload),
+[errors](/docs/api/errors), and [compatibility and persistence](/docs/api/compatibility).

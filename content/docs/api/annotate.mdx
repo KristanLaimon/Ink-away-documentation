@@ -1,0 +1,22 @@
+---
+title: "ink:onInkAwayAnnotate()"
+description: "Ink Away integration API v1: ink:onInkAwayAnnotate()."
+---
+
+Invoke Ink Away's existing KOReader annotation action. This is the same entry
+point used by its configured action/gesture; provider registration is separate.
+
+**Parameters:** none.
+
+**Returns:** `true`, including when no book is open. This is an action-handled
+result, not confirmation that an editor opened. Observe `onAnnotationOpened`
+when you need notification of a successful opening.
+
+**Edge cases:** no book means no editor; a currently shown editor is not opened
+twice; read-only annotation data or editor initialization errors can prevent
+opening. The factory is evaluated as part of a new opening, not during
+registration.
+
+```lua
+ink:onInkAwayAnnotate()
+```

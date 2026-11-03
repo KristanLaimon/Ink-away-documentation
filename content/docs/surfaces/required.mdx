@@ -1,0 +1,165 @@
+---
+title: "Required surface contract"
+description: "Ink Away integration API v1: Required surface contract."
+---
+
+Consumers implement these methods; Ink Away calls them. This is the other side
+of the public integration contract, not a list of methods on the Ink Away instance.
+
+## Object fields and shared types
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `version` | number | Yes | Exactly `1`. |
+| `document` | document object | Yes | Exactly the current `ui.document` object. |
+
+| Type | Shape / units |
+| --- | --- |
+| `Rect` | `{ x = number, y = number, w = number, h = number }`, in absolute screen pixels. |
+| `Page` | Native, 1-based document page number, not a panel index. |
+| `Points` | Flat number array `{x1, y1, x2, y2, ...}`. |
+| `zoom` | Positive scale from native document units to screen pixels. |
+| `angle` | Document-to-screen rotation in radians, clockwise under the surface contract. |
+
+External surfaces support fixed-page documents. Native Ink Away keeps its
+existing word-anchor behavior for reflowing documents. A valid factory result
+must contain all required functions. Any optional method supplied must also be a
+function. Registration validates these fields and method types, not every return
+value or the mathematical correctness of the implementation.
+
+## Required method index
+
+| Method | Accepts | Returns |
+| --- | --- | --- |
+| `pages()` | Nothing. | Array of visible native pages. |
+| `key()` | Nothing. | Layout identity string. |
+| `toPage(x, y)` | Screen point. | `page, px, py, zoom, angle`, or `nil`. |
+| `toScreen(page, px, py)` | Native page point. | `x, y, zoom, angle`, or `nil`. |
+| `snapshot(bb)` | Screen-sized destination. | No value used. |
+| `repaint()` | Nothing. | No value used. |
+| `clip()` | Nothing. | `Rect`, or `nil` when unavailable. |
+
+## `surface:pages()`
+
+**Accepts:** no arguments. **Returns:** an array of currently visible native
+page numbers, for example `{7}` or `{7, 8}`. The first entry is the current page.
+Return actual document pages even when your viewer displays one panel or a
+combined spread. Keep it consistent with both coordinate mappings.
+
+## `surface:key()`
+
+**Accepts:** no arguments. **Returns:** a string that changes whenever page,
+crop, zoom, pan, rotation or layout changes alter annotation placement.
+
+Ink Away uses it to invalidate placement caches. Reusing a key after a geometry
+change can leave saved ink in the wrong position. Include the geometry values
+that affect your mappings; an unchanged layout should have a stable key.
+
+## `surface:toPage(x, y)`
+
+| Input | Type | Meaning |
+| --- | --- | --- |
+| `x`, `y` | numbers | Absolute screen coordinates. |
+
+**Returns:** `page, px, py, zoom, angle` as multiple Lua values, or `nil` when
+no mapping exists. `px` and `py` are native document coordinates. Keep `zoom`
+positive and provide the correct rotation.
+
+Extend mappings beyond the content clip: a stroke's bounding-box origin can
+sit just outside the viewport while part of the stroke remains visible.
+Clipping belongs to `clip()`, not to rejecting every off-viewport point.
+
+```lua
+local page, px, py, zoom, angle = surface:toPage(120, 240)
+if page then
+    -- px/py identify the original document point.
+end
+```
+
+## `surface:toScreen(page, px, py)`
+
+| Input | Type | Meaning |
+| --- | --- | --- |
+| `page` | Page | Original document page. |
+| `px`, `py` | numbers | Native document coordinates. |
+
+**Returns:** `x, y, zoom, angle`, or `nil` for a page that the surface does not
+map. It must agree with `toPage()` and extend beyond the clip. Both directions
+must report the same document-to-screen scale/rotation convention.
+
+```lua
+local x, y, zoom, angle = surface:toScreen(7, 100, 200)
+```
+
+## `surface:snapshot(bb)`
+
+**Accepts:** the screen-sized KOReader blitbuffer to paint. **Returns:** ignored.
+
+Paint your current background in screen coordinates without Ink Away ink. Do
+not retain or free the supplied buffer. Paint newly created content widgets
+before their screen bounds are needed by `clip()`. Snapshot can be called during
+opening, reflow or every animation frame; it must reflect the current geometry.
+
+## `surface:repaint()`
+
+**Accepts:** no arguments. **Returns:** ignored.
+
+Request repainting of your viewer after annotations change, typically using
+KOReader's dirty-region mechanism. Make it safe after your viewer closes.
+It should schedule/invalidate painting rather than recursively paint immediately.
+
+## `surface:clip()`
+
+**Accepts:** no arguments. **Returns:** a content `Rect`, excluding controls and
+letterboxing, or `nil` when no clip is available. An empty rectangle paints no
+reading ink. Keep it inside the screen and consistent with the snapshot.
+
+Ink Away intersects this area with toolbar-free editing space. Widget bounds
+may exist only after painting: when replacing content widgets, initialize them
+through the snapshot before returning a clip based on those bounds.
+
+## Minimal surface example
+
+This example is a single, unrotated fixed-page view with uniform scale. Your
+renderer supplies `paint_background(bb)` and `request_repaint()` functions.
+`rect` is the actual displayed page rectangle in screen coordinates; `zoom`
+relates its size to native page units. The whole displayed page rectangle fits
+on screen; this is not a cropped/folded-view example.
+
+```lua
+local function makeSurface(document, page, rect, zoom,
+        paint_background, request_repaint)
+    assert(zoom > 0)
+    local surface = { version = 1, document = document }
+
+    function surface:pages()
+        return { page }
+    end
+    function surface:key()
+        return table.concat({page, rect.x, rect.y, rect.w, rect.h, zoom}, ":")
+    end
+    function surface:toPage(x, y)
+        return page, (x - rect.x) / zoom, (y - rect.y) / zoom, zoom, 0
+    end
+    function surface:toScreen(p, px, py)
+        if p ~= page then return nil end
+        return rect.x + px * zoom, rect.y + py * zoom, zoom, 0
+    end
+    function surface:snapshot(bb)
+        paint_background(bb) -- background only; no Ink Away overlay
+    end
+    function surface:repaint()
+        request_repaint()
+    end
+    function surface:clip()
+        return { x = rect.x, y = rect.y, w = rect.w, h = rect.h }
+    end
+
+    return surface
+end
+```
+
+Pass the result as `surface` in the rendering-consumer example. This surface has no `turn()` method:
+annotation navigation stays on it. To support page changes, implement the
+navigation contract below; do not silently change native page identity while
+pending edits still use the old geometry.

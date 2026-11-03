@@ -1,7 +1,25 @@
 ---
-title: Ink-away.koplugin
-description: Developer documentation for Ink Away plugin integrations.
+title: "Ink-away.koplugin"
+description: "Integrate your KOReader plugin through public extension points."
 ---
 
-Ink Away provides annotation tools for KOReader. This documentation site uses
-Fumadocs, local MDX content, and static search.
+Ink Away owns annotation tools, ink storage, undo, and export. Other plugins can
+observe annotation sessions or supply a document rendering surface through a
+versioned public API.
+
+<Cards>
+  <Card title="Build an integration" href="/docs/integration" description="Choose event-only or rendering integration. Both support either loading order." />
+  <Card title="Public API reference" href="/docs/api" description="Methods, arguments, returns, errors, and lifecycle rules." />
+  <Card title="Surface contract" href="/docs/surfaces" description="Coordinate mapping, snapshots, clipping, and navigation." />
+  <Card title="Architecture" href="/docs/architecture" description="Understand the public boundary and native defaults." />
+</Cards>
+
+## Availability
+
+These docs describe **integration API v1** and **document surface v1** on the
+`feature/plugin-integration` branch of the Ink Away fork. Unmodified upstream
+4.4.0 does not expose these interfaces. Check the API fields and methods you
+need at runtime; a metadata release number alone is insufficient.
+
+The API uses in-process Lua methods. Parameter and return tables follow an API
+reference style; these are not HTTP endpoints.

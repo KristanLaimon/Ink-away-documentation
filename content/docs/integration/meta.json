@@ -1,0 +1,10 @@
+{
+  "title": "Integration guides",
+  "pages": [
+    "index",
+    "overview",
+    "event-only",
+    "rendering-consumer",
+    "loading-order"
+  ]
+}

@@ -1,0 +1,30 @@
+---
+title: "Errors and failure handling"
+description: "Ink Away integration API v1: Errors and failure handling."
+---
+
+There is no structured error response object. `on_error(err)` receives the
+reported Lua error value; the API currently supplies no error code or phase field.
+
+| Situation | Result |
+| --- | --- |
+| Invalid installation/registration/listener argument or conflicting widget owner | Synchronous assertion; caller may use `pcall`. |
+| Pending `configureInkAway` method throws | Log; continue other consumers; roll back a new composite install owned by that consumer. |
+| Factory throws or returns invalid surface | Log/report; choose the native reader for this opening. |
+| Initial `begin()` throws | Log/report; attempt provider cleanup, then use the native reader. |
+| Editor construction/show fails | Log/report; attempt cleanup; no successful-session events. |
+| Invalid navigation handoff | Report; keep previous surface. |
+| Caught navigation/snapshot/ink-paint failure | Log/report; existing recovery applies, with no automatic mid-session switch. |
+| Active surface `finish()` throws | Log/report; close notification still proceeds through normal cleanup. |
+| Lifecycle listener throws | Log; continue other listeners. It is not sent to a provider's `on_error`. |
+| `on_error` itself throws | Log; do not call it recursively. |
+
+For example, invalid contract validation reports
+`"invalid annotation surface or different document"`; invalid handoff reports
+`"invalid annotation surface handoff"`. Treat them as diagnostic text rather than
+stable machine-readable codes.
+
+Do not assume every error from arbitrary consumer code is intercepted. In
+particular, code running later in your own timer/animation callback is outside
+the original protected call. Handle asynchronous errors in your consumer and
+ensure the navigation completion/cleanup contract is fulfilled.

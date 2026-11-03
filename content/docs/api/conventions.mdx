@@ -1,0 +1,70 @@
+---
+title: "Conventions and readiness"
+description: "Ink Away integration API v1: Conventions and readiness."
+---
+
+Calls are in-process Lua methods. This reference uses API-reference sections for
+parameters, results and errors; there are no HTTP requests or status codes.
+
+- Use `ui.inkAwayIntegrationAPI` for readiness. `ui["ink-away"]` is the normal
+  directory key after KOReader registers the instance; it is not the bootstrap
+  signal. `ui.inkaway` is a legacy alias some consumers use.
+- Use colon calls: `ink:method(...)` and `surface:method(...)`.
+- Call on KOReader's normal UI/event flow. This API does not introduce threads.
+- The public extension API is the facade below. Book, editor, registry and
+  adapter objects are private implementation; consumers do not access them.
+- A method documented as returning `nil` has no success result. It must not be
+  treated as returning an acknowledgement or proof of persistence.
+
+## Version fields
+
+| Field | Current value | Meaning |
+| --- | --- | --- |
+| `ink.integration_api_version` | `1` | Provider registration and lifecycle subscriptions. |
+| `ink.document_surface_version` | `1` | External surface painting/release and the surface contract. |
+
+These are interface versions, independent of the plugin release number. The
+unmodified upstream 4.4.0 reference does not expose these interfaces. Check the
+fields and the methods you need rather than assuming a metadata version is enough.
+Existing consumers using surface discovery can coexist with registered providers.
+
+## Reader UI handshake fields
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `ui.inkAwayIntegrationAPI` | Ink Away instance or `nil` | Ready instance, published after reader initialization; cleared at reader close. |
+| `ui.inkAwayPendingIntegrations` | table or `nil` | Pending `consumer -> true` requests, shared by consumers before readiness. |
+
+Queue an object with `ui.inkAwayPendingIntegrations[consumer] = true`.
+The consumer must be a table exposing `consumer:configureInkAway(ink)`.
+Ink Away supplies both the consumer as `self` and its ready instance as `ink`;
+the method's return value is ignored. No callback wrapper is required.
+A consumer can be a plugin instance or a viewer object with this method.
+It does not need to be a UI widget. Do not overwrite another consumer's entry
+or the whole table, and do not set the ready reference yourself.
+
+The queue has no ordering guarantee. Ink Away removes each request before
+calling the method and isolates failures. Cancelling an entry still works while
+the queue is being drained. A failed method's newly created composite
+installation is rolled back when the installation owner is the consumer itself;
+other consumer side effects need their own cleanup. Entries other than `true`
+or objects without the method are rejected and logged. Once ready, call
+`consumer:configureInkAway(ready)` directly instead of queueing.
+
+When your consumer is disposed before readiness, remove only its own entry, as in
+[main-event-only.lua](/examples/main-event-only.lua). At reader close, readiness and pending requests are cleared;
+installed providers/subscriptions are disposed. A closed instance rejects new
+registrations. `nil` can mean not yet ready or already closed, so dispose your
+consumer state rather than queueing new requests during reader teardown.
+
+## Method index
+
+| Method | Purpose | Returns |
+| --- | --- | --- |
+| [`installPluginIntegration`](/docs/api/install-plugin-integration) | Install a provider and optional scoped listeners together. | `cleanup(release_surface)` function. |
+| [`registerRenderingView`](/docs/api/register-rendering-view) | Register a widget's surface factory. | `unregister()` function. |
+| [`onAnnotationOpened`](/docs/api/on-annotation-opened) | Observe a successfully opened annotation session. | `unsubscribe()` function. |
+| [`onAnnotationClosed`](/docs/api/on-annotation-closed) | Observe session cleanup. | `unsubscribe()` function. |
+| [`paintDocumentSurface`](/docs/api/paint-document-surface) | Draw saved ink over your background. | `nil`. |
+| [`releaseDocumentSurface`](/docs/api/release-document-surface) | Close annotation using your current surface. | `nil`. |
+| [`onInkAwayAnnotate`](/docs/api/annotate) | Invoke the existing KOReader annotation action. | `true`; not a success indicator. |

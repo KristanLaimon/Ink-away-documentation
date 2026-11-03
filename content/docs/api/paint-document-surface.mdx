@@ -1,0 +1,41 @@
+---
+title: "ink:paintDocumentSurface(surface, bb)"
+description: "Ink Away integration API v1: ink:paintDocumentSurface(surface, bb)."
+---
+
+Paint saved Ink Away annotations over your viewer's already-painted background.
+Call it in the reading paint path, after painting the content.
+
+**Parameters**
+
+| Name | Type | Required | Description |
+| --- | --- | --- | --- |
+| `surface` | valid surface table | Yes | Describes the document/view currently being painted. |
+| `bb` | KOReader blitbuffer | Yes | Screen-sized destination; surface geometry uses absolute screen coordinates. |
+
+**Returns**
+
+`nil`. The destination is painted in place; no result object is allocated for the
+consumer. Ink Away does not free your destination buffer.
+
+**Behavior and edge cases**
+
+- Does nothing when Ink Away has no book, the document object does not match,
+  there is no saved ink, or the reading-ink visibility preference is disabled.
+- Uses `regions()` when provided, otherwise the surface itself. Output is clipped
+  to the content rectangles. Missing or empty clips draw no ink for that region.
+- Does not open annotation or change the active session's selected surface.
+- Ink Away suppresses its surface ink paint while capturing a background
+  snapshot. Your `snapshot()` should paint the background without calling this
+  method; this avoids a recursive background/annotation paint loop.
+- Caught painting failures are logged/reported, with no success/failure return.
+  Some drawing may already have happened. Supply valid objects: this method is
+  not an argument-validation endpoint for arbitrary values such as `nil`.
+
+**Example**
+
+```lua
+-- Inside your screen-coordinate paint path:
+paintBackgroundWithoutInk(bb) -- your own drawing function
+ink:paintDocumentSurface(surface, bb)
+```

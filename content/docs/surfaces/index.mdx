@@ -1,0 +1,12 @@
+---
+title: "Document surfaces"
+description: "The rendering dependency contract used by external viewers."
+---
+
+A surface adapts your viewer's presentation to Ink Away. Event-only consumers
+need no surface. Rendering consumers implement [the required contract](/docs/surfaces/required)
+and may add [optional methods](/docs/surfaces/optional) for navigation, viewport
+changes, reading direction, and discontinuous coordinate mapping.
+
+The required contract page includes a minimal affine surface example. The
+optional-method reference covers asynchronous handoffs and stale callbacks.

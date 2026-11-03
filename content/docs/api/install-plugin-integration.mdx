@@ -1,0 +1,67 @@
+---
+title: "ink:installPluginIntegration(widget, surface, options)"
+description: "Ink Away integration API v1: ink:installPluginIntegration(widget, surface, options)."
+---
+
+Install one widget's rendering provider and optional surface-scoped lifecycle
+listeners together. Call from your `configureInkAway(ink)` method. The method uses
+its own reader UI; do not pass `ui` again as an argument.
+
+**Parameters**
+
+| Name | Type | Required | Description |
+| --- | --- | --- | --- |
+| `widget` | table | Yes | The owning viewer widget. |
+| `surface` | valid surface table | Yes | A version-1 surface for exactly this reader's document. |
+| `options` | table | No | Optional callbacks below. |
+| `options.on_open` | function | No | Receives the open event only when `event.surface` is this installed surface. |
+| `options.on_close` | function | No | Receives the close event only when its final surface is this installed surface. |
+| `options.on_error` | function | No | Provider error callback, as in `registerRenderingView`. |
+
+**Returns**
+
+An idempotent `cleanup(release_surface)` function. It returns `nil`. With no
+argument, or any value other than `false`, cleanup attempts to release/save/close
+this surface's active editor, then unregisters the provider and unsubscribes both
+listeners. Close listeners remain connected during release. If release throws,
+cleanup still removes registrations/listeners and reports the error.
+
+`cleanup(false)` unregisters and unsubscribes without releasing the active
+surface. Use this for an outgoing viewer during an intentional navigation
+handoff, not for ordinary destruction. Calling cleanup again does not later
+release a surface skipped by the first call; the landing owner must release it.
+Pending queue cancellation is the consumer's responsibility, as shown in
+[main-rendering-consumer.lua](/examples/main-rendering-consumer.lua).
+
+**Behavior and edge cases**
+
+- Installing again for the same widget and exact surface returns the **same
+  cleanup function**. The first installation's callbacks remain in force; new
+  options do not add or replace listeners.
+- A different surface for an already-installed widget raises an assertion.
+  Complete the old cleanup before installing a replacement.
+- Do not combine a low-level registration and a composite installation for the
+  same widget. Both own the same provider slot; duplicate ownership is rejected.
+- Surface validation occurs immediately, before a provider/listener is added.
+- Invalid types, optional callback types, wrong-document/invalid surfaces,
+  installation during disposal, and installation on a closed reader raise
+  synchronous assertions. No setup-success event is emitted.
+- Installation does not show a widget or open annotation. Surface selection and
+  provider errors during a later opening follow the low-level registration rules.
+- Scoped listeners match exact surface identity. A navigation handoff to a new
+  surface does not cause the outgoing installation to receive the final close
+  event. Use independent instance-level subscriptions if you need all sessions.
+- Reader closure disposes composite installations. Explicit widget cleanup is
+  still required when a widget closes sooner.
+
+**Example**
+
+```lua
+local cleanup = ink:installPluginIntegration(widget, surface, {
+    on_open = function(event) logger.dbg("Opened", event.document) end,
+    on_close = function(event) logger.dbg("Closed", event.document) end,
+    on_error = function(err) logger.warn("Provider failure", err) end,
+})
+-- Before destroying the widget:
+cleanup()
+```

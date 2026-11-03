@@ -1,0 +1,17 @@
+{
+  "title": "Public API",
+  "pages": [
+    "index",
+    "conventions",
+    "install-plugin-integration",
+    "register-rendering-view",
+    "on-annotation-opened",
+    "on-annotation-closed",
+    "event-payload",
+    "paint-document-surface",
+    "release-document-surface",
+    "annotate",
+    "errors",
+    "compatibility"
+  ]
+}

@@ -1,0 +1,25 @@
+---
+title: "Compatibility and persistence"
+description: "Ink Away integration API v1: Compatibility and persistence."
+---
+
+- Legacy `widget:getAnnotationSurface()` discovery remains supported for
+  version-1 consumers without registration. It has no provider error callback.
+- The readiness handshake uses only the current reader UI, a per-consumer method queue
+  and the ready instance. It neither loads another plugin's code nor changes
+  KOReader's plugin loading order.
+- Registration, provider callbacks and subscriptions require no runtime method
+  replacement. Keep your implementation inside your plugin.
+- Saved ink uses unchanged native document coordinates and sidecar schema.
+  Viewer-specific page positions, zoom values or metadata are not persisted.
+  Untouched annotations retain their existing item identities.
+- Export renders original document pages independently of viewer crop/zoom.
+- Paths and primitive outlines can cross discontinuities. Text boxes, pictures
+  and pixel-run fills in the editable canvas use a local affine transform;
+  offer an original/affine view for editing objects across removed regions.
+  `regions()` improves reading overlays, not non-path editing geometry.
+- Navigation and reflow reload the editable canvas's local history while keeping
+  saved annotations. Do not advertise history continuity across those reloads.
+
+For responsibilities and the public/private boundary, see
+[Arquitecture.md](Arquitecture.md).
