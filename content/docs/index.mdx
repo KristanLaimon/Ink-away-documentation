@@ -3,23 +3,34 @@ title: "Integrate your plugin with Ink Away"
 description: "Start here. You need Lua and a KOReader plugin; no Ink Away knowledge is assumed."
 ---
 
-Ink Away adds freehand annotations to KOReader. A reader opens its drawing
-editor, writes on the page, and closes it to return to reading. Ink Away handles
-the drawing tools and saves the annotations.
+Ink Away offers includes a public API that allows other plugins
+to connect to it, and extend its functionality, like mods. This way is easier integrate other
+plugins with Ink Away without messing its internals or having to "monkey-patch" it.
 
-Your plugin can subscribe to that editor's events. If you have your own page
-viewer, you can also let readers annotate inside it.
+# What you can do?
 
-## Choose an example
+Your plugin can subscribe and be notified of all "Ink-Away" important events like:
+- Opening Annotator Book Layer
+- Closing ********************
+- Option to give him a custom view renderer.
+- & more
 
-| Your plugin needs to… | Start here |
-| --- | --- |
-| React when annotation opens or closes | [Event-only consumer](/docs/integration/event-only) |
-| Let users annotate a custom viewer | [Rendering consumer](/docs/integration/rendering-consumer) |
+# Aha, like what I can do with this?
 
-A plugin can do both. You do not need a custom viewer to subscribe to events.
+## Example #1: Panels+ Plugin
+<video width="30%" controls height="auto" src="https://github.com/user-attachments/assets/fdf3ef83-c7df-48f4-bb30-ca32a2305b90"></video>
+This plugin has its own view render and needs to know when the button `>` or `<` are pressed so it executes Panels+ next panel or previous
+panel behavior. This means that:
 
-## The names used in these docs
+- You need Ink-Away to notify you when those buttons are pressed.
+- You need to tell Ink-Away to use a custom document viewer render, instead of KOReader default one.
+
+So this Ink-away public API exposes events and methods to make that possible in first place.
+
+---
+
+# Useful nomenclature
+Troughout this section, we'll be using the following terms:
 
 - **`ui`** is KOReader's reader UI for the open book. In your plugin, this is
   normally `self.ui`.
@@ -30,43 +41,4 @@ A plugin can do both. You do not need a custom viewer to subscribe to events.
 - **Surface** is a Lua table that tells Ink Away how your viewer's screen positions
   map to the book's original page coordinates.
 
-## Connect in either loading order
 
-Add a `configureInkAway(ink)` method to your consumer. If Ink Away is ready, call
-it now. Otherwise add your consumer to its queue:
-
-```lua
-local ink = self.ui.inkAwayIntegrationAPI
-if ink then
-    self:configureInkAway(ink)
-else
-    self.ui.inkAwayPendingIntegrations = self.ui.inkAwayPendingIntegrations or {}
-    self.ui.inkAwayPendingIntegrations[self] = true
-end
-```
-
-Ink Away calls `self:configureInkAway(ink)` after it finishes initializing.
-Both examples show what to put in that method and how to clean up afterward.
-Connect again for each new reader; remove your integration when its owner closes.
-
-## Supported version
-
-These docs describe the fork's **`feature/plugin-integration` branch**.
-Unmodified upstream 4.4.0 does not provide this API. Check
-[`integration_api_version`](/docs/api/integration-api-version) before subscribing;
-rendering consumers also check [`document_surface_version`](/docs/api/document-surface-version).
-If Ink Away is unavailable, your plugin should continue its normal behavior.
-
-## Public API
-
-Use these pages when you need a method's arguments, return value, or edge cases.
-
-| Methods | Reader fields and version fields |
-| --- | --- |
-| [onAnnotationOpened](/docs/api/on-annotation-opened) | [ui.inkAwayIntegrationAPI](/docs/api/ready-instance) |
-| [onAnnotationClosed](/docs/api/on-annotation-closed) | [ui.inkAwayPendingIntegrations](/docs/api/pending-integrations) |
-| [installPluginIntegration](/docs/api/install-plugin-integration) | [ink.integration_api_version](/docs/api/integration-api-version) |
-| [registerRenderingView](/docs/api/register-rendering-view) | [ink.document_surface_version](/docs/api/document-surface-version) |
-| [paintDocumentSurface](/docs/api/paint-document-surface) | |
-| [releaseDocumentSurface](/docs/api/release-document-surface) | |
-| [onInkAwayAnnotate](/docs/api/annotate) | |
