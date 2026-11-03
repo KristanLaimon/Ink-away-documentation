@@ -1,1 +1,0 @@
-import {m}from'./chunk-FILR6FBP.js';export{A as ChatMock,l as CreateWhatsSocketVendorFactoryMock,z as WhatsSocket_Submodule_Receiver_MockingSuite}from'./chunk-FILR6FBP.js';import'./chunk-JFKSI6I7.js';var e=class{mockClient;constructor(){this.mockClient=new m;}async Create(){return this.mockClient}};export{e as GenericSocketVendorClient_Mock,e as MockAdapter};
