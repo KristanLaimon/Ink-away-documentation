@@ -1,0 +1,49 @@
+.hero {
+  --crayon-rail: clamp(56px, 16vw, 240px);
+  --crayon-inset: clamp(0px, 2vw, 40px);
+  position: relative;
+  isolation: isolate;
+}
+
+.content {
+  position: relative;
+  width: min(100% - (var(--crayon-rail) + var(--crayon-inset)) * 2 - 32px, 672px);
+  margin-inline: auto;
+  padding-block: 12px;
+}
+
+.artwork {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  user-select: none;
+  z-index: -1;
+}
+
+.track {
+  position: absolute;
+  width: var(--crayon-rail);
+  height: auto;
+  overflow: hidden;
+}
+
+.leftTop { left: var(--crayon-inset); top: 0; }
+.leftBottom { left: var(--crayon-inset); bottom: 0; }
+.right { right: var(--crayon-inset); top: 25%; }
+.line, .crayon { opacity: 0; }
+
+@media (prefers-reduced-motion: reduce) {
+  .artwork { display: none; }
+}
+
+@media (max-width: 640px) {
+  .hero {
+    --crayon-rail: clamp(48px, 14vw, 64px);
+    --crayon-inset: 0px;
+  }
+  .content { width: calc(100% - var(--crayon-rail) * 2 - 8px); }
+  .leftTop { top: 7%; }
+  .leftBottom { bottom: 10%; }
+  .right { top: 36%; }
+}
