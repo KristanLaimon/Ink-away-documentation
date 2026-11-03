@@ -1,42 +1,34 @@
 ---
-title: "ink:releaseDocumentSurface(surface)"
-description: "Ink Away integration API v1: ink:releaseDocumentSurface(surface)."
+title: "releaseDocumentSurface"
+description: "Close annotation on your surface before destroying its resources."
 ---
 
-Save/close an active annotation editor using this exact surface before its
-owning viewer or surface resources are destroyed.
-
-**Parameters**
-
-| Name | Type | Required | Description |
-| --- | --- | --- | --- |
-| `surface` | valid external surface table | Yes | The exact surface object being released. Do not pass `nil`. |
-
-**Returns**
-
-`nil`. It does not return a persistence acknowledgement.
-
-**Behavior and edge cases**
-
-- Acts only when the active surface is the same Lua object. Equal fields on a
-  different table do not match. An unrelated or previously released surface
-  does not close the current session.
-- Uses Ink Away's normal close/save path and clears that surface selection.
-  This path also closes book notes if open.
-- Does not unregister your widget or unsubscribe your listeners. Do those
-  separately after release.
-- During navigation, keep the surface being handed to `done(surface)` alive.
-  Disposing of the outgoing widget must not close the session being transferred.
-  After handoff, release the final active surface when its viewer closes.
-- Provider `finish()` must tolerate the owning viewer already being closed.
-
-**Example**
+Use this when managing a rendering provider yourself. If you used
+[installPluginIntegration](/docs/api/install-plugin-integration), its `cleanup()`
+already releases the surface for you.
 
 ```lua
--- For a manually managed low-level registration:
 ink:releaseDocumentSurface(surface)
-unregister()
-stop_open()
-stop_close()
--- Now dispose of the widget's rendering resources.
+unregister() -- your registerRenderingView cleanup
+-- Remove independent event subscriptions, then destroy the viewer.
 ```
+
+## Arguments
+
+| Name | Type | Meaning |
+| --- | --- | --- |
+| `surface` | surface table | The exact surface object you own. Never pass `nil`. |
+
+## Returns
+
+No value (`nil`). Closure does not acknowledge a successful disk save.
+
+## Things to know
+
+- Only the exact currently active surface matches. Another table with equal fields does not close it.
+- It uses the normal save/close path, also closes book notes if open, and clears that surface selection.
+- It does not unregister providers or remove listeners. Release first, while close listeners are still connected.
+- During a navigation handoff, keep the landing surface alive. Do not release the session being transferred; the final viewer releases it on closure.
+- A surface's `finish()` must tolerate its viewer already being closed.
+
+Event-only consumers do not need this method.

@@ -1,39 +1,42 @@
 ---
-title: "ink:onAnnotationClosed(callback)"
-description: "Ink Away integration API v1: ink:onAnnotationClosed(callback)."
+title: "onAnnotationClosed"
+description: "Run a callback when the annotation editor closes."
 ---
 
-Subscribe to cleanup of an annotation session that successfully opened.
-
-**Parameters**
-
-| Name | Type | Required | Description |
-| --- | --- | --- | --- |
-| `callback` | function | Yes | Receives one [event payload](/docs/api/event-payload). Its return value is ignored. |
-
-**Returns**
-
-An idempotent `unsubscribe()` function with no parameters or result.
-
-**Behavior and edge cases**
-
-- Fires once after the normal save/cleanup path has been attempted and the
-  selected surface's `finish()` has been attempted, if supplied.
-- A close event is **not proof of a successful disk write**.
-- The payload contains the final surface after any navigation handoffs. It may
-  differ from the surface in the opening event.
-- Constructor/show failures do not invent a close event for a session that never
-  opened. Repeated cleanup does not produce repeated close notifications.
-- Native-reader sessions use `surface = nil`.
-- There is no replay or cancellation. Wrong callback types assert; callback
-  exceptions are logged and isolated.
-
-**Example**
+Use this to restore your plugin's state after annotation ends.
+No viewer or surface registration is required.
 
 ```lua
-local unsubscribe = ink:onAnnotationClosed(function(event)
-    if event.document == ui.document then
-        logger.dbg("Annotation session closed")
-    end
+local stop = ink:onAnnotationClosed(function(event)
+    self.annotation_open = false
+    self.last_annotation_document = event.document
 end)
+
+-- When your plugin disconnects:
+stop()
 ```
+
+## Arguments
+
+| Name | Type | Meaning |
+| --- | --- | --- |
+| `callback` | function | Receives `{document, surface}` after the session's cleanup attempts. Its return value is ignored. |
+
+`document` is the book's document object. `surface` is the final surface used by
+the session, or `nil` for the normal reader. It can differ from the opening
+surface after a viewer handoff.
+
+## Returns
+
+An idempotent `unsubscribe()` function with no arguments or result.
+
+## Things to know
+
+- This is a closure notification, not proof that saving to disk succeeded.
+- It reports future closures only; it does not replay an earlier session.
+- Returning `false` cannot cancel closure. Listener errors are logged and isolated.
+- Invalid callback types and registration after reader closure raise a Lua assertion.
+- Independent listeners run in subscription order. Removing a listener during an event takes effect immediately; adding one takes effect on the next event. Treat each payload as read-only.
+
+Use [onAnnotationOpened](/docs/api/on-annotation-opened) to track the other end
+of the session. The [event-only example](/docs/integration/event-only) shows both.

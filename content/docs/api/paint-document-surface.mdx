@@ -1,41 +1,34 @@
 ---
-title: "ink:paintDocumentSurface(surface, bb)"
-description: "Ink Away integration API v1: ink:paintDocumentSurface(surface, bb)."
+title: "paintDocumentSurface"
+description: "Draw saved annotations over your viewer background."
 ---
 
-Paint saved Ink Away annotations over your viewer's already-painted background.
-Call it in the reading paint path, after painting the content.
-
-**Parameters**
-
-| Name | Type | Required | Description |
-| --- | --- | --- | --- |
-| `surface` | valid surface table | Yes | Describes the document/view currently being painted. |
-| `bb` | KOReader blitbuffer | Yes | Screen-sized destination; surface geometry uses absolute screen coordinates. |
-
-**Returns**
-
-`nil`. The destination is painted in place; no result object is allocated for the
-consumer. Ink Away does not free your destination buffer.
-
-**Behavior and edge cases**
-
-- Does nothing when Ink Away has no book, the document object does not match,
-  there is no saved ink, or the reading-ink visibility preference is disabled.
-- Uses `regions()` when provided, otherwise the surface itself. Output is clipped
-  to the content rectangles. Missing or empty clips draw no ink for that region.
-- Does not open annotation or change the active session's selected surface.
-- Ink Away suppresses its surface ink paint while capturing a background
-  snapshot. Your `snapshot()` should paint the background without calling this
-  method; this avoids a recursive background/annotation paint loop.
-- Caught painting failures are logged/reported, with no success/failure return.
-  Some drawing may already have happened. Supply valid objects: this method is
-  not an argument-validation endpoint for arbitrary values such as `nil`.
-
-**Example**
+Call this after your viewer paints its content in the reading paint handler.
+It paints into the supplied buffer; it does not open an annotation editor.
 
 ```lua
--- Inside your screen-coordinate paint path:
-paintBackgroundWithoutInk(bb) -- your own drawing function
+paintBackgroundWithoutInk(bb) -- your viewer's own renderer
 ink:paintDocumentSurface(surface, bb)
 ```
+
+## Arguments
+
+| Name | Type | Meaning |
+| --- | --- | --- |
+| `surface` | valid surface table | Describes the current document and geometry. |
+| `bb` | KOReader blitbuffer | Screen-sized destination using absolute screen coordinates. |
+
+## Returns
+
+No value (`nil`). The buffer is painted in place and is not freed by Ink Away.
+
+## Things to know
+
+- Nothing is drawn if there is no book, no saved ink, a different document, or reading ink is disabled in settings.
+- Ink is clipped to the surface's content rectangle, or its optional `regions()`. Empty/missing clips draw no ink.
+- It does not replace the selected surface of an active annotation session.
+- Never call it from `surface:snapshot()`: that method paints only the background. This avoids a recursive ink overlay.
+- Caught painting errors are logged/reported without a success result. Some pixels may already be painted. Supply valid objects; `nil` is not a supported surface.
+
+The [rendering example](/docs/integration/rendering-consumer) shows where this
+fits in setup, painting, and teardown.

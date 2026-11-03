@@ -1,10 +1,7 @@
 {
-  "title": "Integration guides",
+  "title": "Examples",
   "pages": [
-    "index",
-    "overview",
     "event-only",
-    "rendering-consumer",
-    "loading-order"
+    "rendering-consumer"
   ]
 }

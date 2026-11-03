@@ -1,0 +1,44 @@
+---
+title: "ui.inkAwayPendingIntegrations"
+description: "Ask Ink Away to configure your consumer after it becomes ready."
+---
+
+Use this queue only when [the ready instance](/docs/api/ready-instance) is
+missing during your reader's setup.
+
+| Type | Entry |
+| --- | --- |
+| table or `nil` | `consumer_object -> true` |
+
+```lua
+self.ui.inkAwayPendingIntegrations = self.ui.inkAwayPendingIntegrations or {}
+self.ui.inkAwayPendingIntegrations[self] = true
+
+function YourPlugin:configureInkAway(ink)
+    -- Called with your consumer as self and the ready instance as ink.
+end
+```
+
+The consumer must be a table with `configureInkAway(ink)`. It does not need a
+viewer. Add your entry without replacing the shared queue.
+
+## Cancellation
+
+Before your owner closes, remove only its entry:
+
+```lua
+local pending = self.ui.inkAwayPendingIntegrations
+if pending then pending[self] = nil end
+```
+
+Ink Away removes a queued entry before calling it. Calls have no ordering
+guarantee; one consumer's error does not block others. Cancellation works during
+the drain too. Non-`true` entries or consumers without the method are rejected
+and logged. A method's return value is ignored.
+
+A failed configuration rolls back a new composite installation owned by that
+same consumer. Other side effects, including independent subscriptions, need
+your own cleanup. The queue is cleared when the reader closes.
+
+Once ready, call `self:configureInkAway(ink)` directly. The
+[event-only example](/docs/integration/event-only) shows both paths together.

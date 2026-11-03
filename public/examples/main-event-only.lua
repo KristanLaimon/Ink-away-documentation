@@ -4,8 +4,8 @@
 -- A real plugin wires these mock methods into its reader-scoped lifecycle.
 local YourPlugin = {}
 
--- MOCK signature: ui is this reader's UI. There are no viewer arguments.
-function YourPlugin:init(ui)
+-- MOCK helper, called from your own setup: ui is this reader's UI. There are no viewer arguments.
+function YourPlugin:connectInkAway(ui)
     self.ui = ui
     self.closed, self.annotation_open = false, false
     self.status = "Waiting for Ink Away"

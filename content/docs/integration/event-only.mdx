@@ -1,109 +1,79 @@
 ---
 title: "Event-only consumer"
-description: "Observe annotation sessions without creating a viewer, surface, or rendering provider."
+description: "React to annotation opening and closing. No viewer or surface is needed."
 ---
 
-Observe annotation sessions without creating a viewer, surface, or rendering provider.
+This example pauses your plugin's work while the reader is annotating, then
+lets it resume. It listens to sessions in both the normal reader and custom viewers.
 
-Both examples support registration **before or after** Ink Away becomes ready.
-A plugin can have both roles; these guides separate them for clarity.
+`YourPlugin` is your plugin object. The helper names below belong to the example:
+call `self:connectInkAway(self.ui)` from your own reader setup, and `self:dispose()` from
+your teardown. They are not required KOReader lifecycle signatures.
 
-## How to connect
+## 1. Connect when your reader opens
 
-1. Define `YourPlugin:configureInkAway(ink)` on your reader-scoped consumer.
-2. If `ui.inkAwayIntegrationAPI` exists, call the method immediately.
-3. Otherwise queue `ui.inkAwayPendingIntegrations[self] = true`.
-4. On disposal, cancel that request or remove your installed subscriptions.
-
-This is a **documentation mock**, not an installable plugin. Its lifecycle
-methods represent your own plugin's setup and cleanup hooks.
-
-## Complete Lua example
-
-```lua title="main-event-only.lua"
--- YourPlugin/main.lua -- illustrative mock, NOT an installable KOReader plugin.
--- Event-only consumer: handles both before-ready and after-ready registration.
--- No viewer, surface, rendering provider or rendering injection is required.
--- A real plugin wires these mock methods into its reader-scoped lifecycle.
-local YourPlugin = {}
-
--- MOCK signature: ui is this reader's UI. There are no viewer arguments.
-function YourPlugin:init(ui)
+```lua
+function YourPlugin:connectInkAway(ui)
     self.ui = ui
-    self.closed, self.annotation_open = false, false
-    self.status = "Waiting for Ink Away"
+    self.closed = false
     if ui.inkAwayIntegrationAPI then
-        -- INK-AWAY has INITIALIZED: configure immediately using the ready instance.
         self:configureInkAway(ui.inkAwayIntegrationAPI)
     else
-        -- BEFORE INK-AWAY IS INITIALIZED: share the queue without overwriting other consumers
-        -- in case there are other plugins installed which integrate with ink-away as well!
         ui.inkAwayPendingIntegrations = ui.inkAwayPendingIntegrations or {}
         ui.inkAwayPendingIntegrations[self] = true
     end
 end
+```
 
+If Ink Away is already ready, configuration happens immediately. If it loads
+later, it removes your queue entry and calls your method. You do not need to
+look up `ui["ink-away"]` or control plugin loading order.
+
+## 2. Subscribe in configureInkAway
+
+```lua
 function YourPlugin:configureInkAway(ink)
-    if self.closed or self.stop_open then
-        return
-    end
-    -- Event consumers only need the event API, not document_surface_version.
-    if
-        ink.integration_api_version ~= 1
-        or type(ink.onAnnotationOpened) ~= "function"
-        or type(ink.onAnnotationClosed) ~= "function"
-    then
-        self.status = "This Ink Away version does not support the event API"
-        return
-    end
+    if self.closed or self.stop_open then return end
+    if ink.integration_api_version ~= 1 then return end
 
-    -- Observe all annotation sessions on this reader, including the native view.
     self.stop_open = ink:onAnnotationOpened(function(event)
         self.annotation_open = true
         self.annotation_document = event.document
-        self.status = "Annotation opened"
-        -- MOCK: pause your plugin's own work while annotation is active.
-        -- event.surface may be nil (native viewer) or an external surface.
+        -- Pause your plugin's work here.
     end)
-    self.stop_close = ink:onAnnotationClosed(function(event)
-        self.last_annotation_document = event.document
+    self.stop_close = ink:onAnnotationClosed(function()
         self.annotation_open = false
         self.annotation_document = nil
-        self.status = "Annotation closed"
-        -- MOCK: resume your plugin's work. This does not confirm a disk save.
+        -- Resume your plugin's work here.
     end)
-    self.status = "Listening for annotation events"
 end
-
--- Call when this plugin's reader-scoped instance is disposed.
-function YourPlugin:dispose()
-    if self.closed then
-        return
-    end
-    self.closed = true
-    local pending = self.ui.inkAwayPendingIntegrations
-    if pending and pending[self] == true then
-        pending[self] = nil
-        if next(pending) == nil then
-            self.ui.inkAwayPendingIntegrations = nil
-        end
-    end
-    if self.stop_open then
-        self.stop_open()
-    end
-    if self.stop_close then
-        self.stop_close()
-    end
-    -- An observer owns no annotation surface and must not release someone else's.
-    self.stop_open, self.stop_close = nil, nil
-    self.annotation_open, self.annotation_document = false, nil
-    self.status = "Disposed"
-end
-
-return YourPlugin
 ```
 
-[Download the Lua mock](/examples/main-event-only.lua).
+Keep the two returned functions: calling them unsubscribes your listeners.
+`event.document` identifies the book. `event.surface` is `nil` for the normal
+reader, or a surface table for a custom viewer. Events describe future openings
+and closings; subscribing does not replay a session already in progress.
 
-Read [loading order](/docs/integration/loading-order),
-[readiness fields](/docs/api/conventions), and the [public API](/docs/api).
+## 3. Disconnect when your owner closes
+
+```lua
+function YourPlugin:dispose()
+    if self.closed then return end
+    self.closed = true
+    local pending = self.ui.inkAwayPendingIntegrations
+    if pending then pending[self] = nil end
+    if self.stop_open then self.stop_open() end
+    if self.stop_close then self.stop_close() end
+    self.stop_open, self.stop_close = nil, nil
+end
+```
+
+Removing the queue entry cancels a connection that has not happened yet.
+Unsubscribing stops an existing connection. An event-only consumer does not
+close an editor or release another plugin's surface.
+
+[Download the complete Lua mock](/examples/main-event-only.lua).
+
+For details, see [onAnnotationOpened](/docs/api/on-annotation-opened),
+[onAnnotationClosed](/docs/api/on-annotation-closed), and
+[the pending queue](/docs/api/pending-integrations).

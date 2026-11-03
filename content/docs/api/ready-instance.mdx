@@ -1,0 +1,28 @@
+---
+title: "ui.inkAwayIntegrationAPI"
+description: "Find out whether Ink Away is ready for this reader."
+---
+
+Read this field to get the initialized Ink Away instance.
+
+| Type | Value |
+| --- | --- |
+| Ink Away object or `nil` | Ready instance after initialization; `nil` before readiness or after reader closure. |
+
+```lua
+local ink = self.ui.inkAwayIntegrationAPI
+if ink then
+    self:configureInkAway(ink)
+end
+```
+
+Ink Away sets and clears this field. Do not assign it yourself. There is no
+separate loaded boolean to maintain.
+
+When it is `nil` during reader setup, use
+[inkAwayPendingIntegrations](/docs/api/pending-integrations). When your reader is
+closing, clean up instead of adding another request.
+
+`ui["ink-away"]` may not exist yet while Ink Away initializes. The ready field
+and the instance passed to `configureInkAway` avoid that loading-order problem.
+Readiness does not guarantee an API version: check the version fields you use.

@@ -1,41 +1,40 @@
 ---
-title: "ink:onAnnotationOpened(callback)"
-description: "Ink Away integration API v1: ink:onAnnotationOpened(callback)."
+title: "onAnnotationOpened"
+description: "Run a callback when the annotation editor opens."
 ---
 
-Subscribe to successful annotation-session opening for this reader, including
-sessions using the native KOReader viewer.
-
-**Parameters**
-
-| Name | Type | Required | Description |
-| --- | --- | --- | --- |
-| `callback` | function | Yes | Receives one [event payload](/docs/api/event-payload). Its return value is ignored. |
-
-**Returns**
-
-An idempotent `unsubscribe()` function with no parameters or result.
-
-**Behavior and edge cases**
-
-- Fires once after the annotation editor has been created and shown.
-- Repeating an open request while that editor is shown does not emit another
-  event. Navigation and toolbar reflow do not open a new session.
-- If the editor cannot be created/shown, or annotation cannot open, no open
-  event is emitted. A request alone is not a session.
-- There is no replay: subscribing after opening observes future openings only.
-- This event observes an opening; returning `false` does not cancel it.
-- Non-function callbacks raise a synchronous assertion. Listener exceptions are
-  logged and do not prevent the other listeners from running.
-
-**Example**
+Listen to annotation opening on this reader, including the normal KOReader view.
+No viewer or surface registration is required.
 
 ```lua
-local unsubscribe = ink:onAnnotationOpened(function(event)
-    if event.surface then
-        logger.dbg("External-viewer annotation opened")
-    else
-        logger.dbg("Native-reader annotation opened")
-    end
+local stop = ink:onAnnotationOpened(function(event)
+    self.annotation_open = true
+    self.annotation_document = event.document
 end)
+
+-- When your plugin disconnects:
+stop()
 ```
+
+## Arguments
+
+| Name | Type | Meaning |
+| --- | --- | --- |
+| `callback` | function | Called once after the editor is created and shown. Its return value is ignored. |
+
+The callback receives `{document = ui.document, surface = surface_or_nil}`.
+`surface` is `nil` for the normal reader and a surface table for an external viewer.
+
+## Returns
+
+An `unsubscribe()` function. Call it when your owner closes. Calling it again is safe;
+it takes no arguments and returns no value.
+
+## Things to know
+
+- Subscribing does not replay a session already open. Navigation is not a new opening.
+- A failed open or another open request for an already-shown editor emits no new event.
+- Returning `false` cannot cancel opening. Listener errors are logged; other listeners still run.
+- The callback must be a function. Invalid arguments or subscribing after reader closure raise a Lua assertion.
+
+See the [event-only example](/docs/integration/event-only) for connection and cleanup.

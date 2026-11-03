@@ -1,78 +1,124 @@
 ---
-title: "ink:registerRenderingView(widget, factory, on_error)"
-description: "Ink Away integration API v1: ink:registerRenderingView(widget, factory, on_error)."
+title: "registerRenderingView"
+description: "Register a factory when your viewer needs to choose its surface dynamically."
 ---
 
-Register one rendering provider for an owning widget. Ink Away evaluates its
-factory when it selects a viewer for a new annotation session.
-
-**Parameters**
-
-| Name | Type | Required | Description |
-| --- | --- | --- | --- |
-| `widget` | table | Yes | Your actual viewer widget, present on KOReader's window stack when eligible. |
-| `factory` | function | Yes | Called as `factory(widget, context)`; returns a surface or `nil`. |
-| `on_error` | function | No | Called as `on_error(err)` for reported provider failures. |
-
-Factory input:
+Most viewers can use [installPluginIntegration](/docs/api/install-plugin-integration).
+Use a factory when you need to choose or decline a surface as annotation opens.
 
 ```lua
-context = {
-    document = ui.document, -- the actual currently open document object
-}
-```
-
-Factory output: a [surface](/docs/surfaces/required) whose `document` is that same
-object, or `nil` to decline. Matching filenames are insufficient: object identity
-must match. Keep returned geometry current throughout the session.
-
-**Returns**
-
-An `unregister()` function. It accepts no arguments, returns `nil`, and is safe
-to call repeatedly. It removes this registration only; it does not close an
-active editor or remove event subscriptions.
-
-**Selection rules and edge cases**
-
-- Widgets are examined from the top of the current window stack downward.
-- A registered factory takes precedence over that widget's legacy
-  `getAnnotationSurface()` method. Returning `nil` does not call that legacy
-  method on the same widget.
-- The first valid returned surface is selected. A declining widget allows the
-  search to continue unless it blocks the search as described below.
-- A fullscreen widget blocks the search below it when `covers_fullscreen` is
-  true and neither `toast` nor `invisible` is true. Its own provider is checked
-  before that blocking rule.
-- Registrations for widgets outside the stack are not considered. If a widget
-  stays in the stack while logically hidden, its factory should decline.
-- Different widgets may register independently. A second registration for the
-  **same widget** raises an assertion; unregister first before replacing it.
-- Factory exceptions or an invalid returned surface stop selection and use the
-  native reader. A failed selected provider is not replaced by a lower provider.
-- Unregister does not disable legacy discovery. If the widget still exposes
-  `getAnnotationSurface()`, it may remain discoverable until removed or disabled
-  by that consumer.
-- A registration belongs to this Ink Away instance. Create a new hookup for a
-  new reader/document lifecycle and release the old one.
-
-**Errors**
-
-Wrong argument types and duplicate registration raise synchronous Lua assertions.
-They are caller errors and do not call `on_error`. Factory/contract failures are
-reported to `on_error`, if supplied. The error value is not guaranteed to be a
-string; use `tostring(err)` for display. See [error handling](/docs/api/errors).
-
-**Example**
-
-```lua
-local unregister = ink:registerRenderingView(widget, function(_, context)
-    if context.document ~= surface.document then return nil end
-    return surface
+local unregister = ink:registerRenderingView(viewer_widget, function(owner, context)
+    if owner == viewer_widget and context.document == surface.document then
+        return surface
+    end
 end, function(err)
-    logger.warn("Viewer provider:", tostring(err))
+    self.last_error = tostring(err)
 end)
 
--- Later, before destroying the widget:
+-- Before destroying the viewer:
 ink:releaseDocumentSurface(surface)
 unregister()
 ```
+
+## Arguments
+
+| Name | Type | Meaning |
+| --- | --- | --- |
+| `widget` | table | Your actual viewer widget. |
+| `factory` | function | Called as `factory(widget, {document = ui.document})`; returns a surface or `nil`. |
+| `on_error` | function, optional | Receives reported provider failures. Use `tostring(err)` if displaying them. |
+
+## Returns
+
+An idempotent `unregister()` function with no arguments or result. It removes
+the provider; it does not close an editor or unsubscribe independent listeners.
+
+## Selection and errors
+
+Ink Away searches the window stack from top to bottom when opening annotation.
+The first valid surface wins. Widgets outside the stack are ignored. A fullscreen
+widget blocks the search below it unless it is a toast or invisible.
+
+Returning `nil` lets the search continue, subject to that fullscreen rule.
+A factory error or invalid surface reports the failure and falls back to the
+native reader; it does not try a lower provider. Invalid registration arguments,
+a duplicate widget, or a closed reader raise assertions immediately instead.
+
+Registration takes precedence over a widget's legacy `getAnnotationSurface()`
+method, including when its factory declines. Unregistering does not remove that
+legacy method. Register again for each new reader.
+
+## Surface contract
+
+The [rendering example](/docs/integration/rendering-consumer) is the easiest place
+to start. Expand this reference when implementing your adapter.
+
+<details>
+<summary>Required fields and methods</summary>
+
+A surface is a Lua table you implement. It describes a fixed-page view:
+
+```lua
+local surface = {
+    version = 1,
+    document = ui.document, -- same object, not just the same filename
+}
+```
+
+| Required method | Accepts | Returns or action |
+| --- | --- | --- |
+| `pages()` | Nothing | Visible native page numbers, current page first. |
+| `key()` | Nothing | A stable string for this layout; change it when geometry changes. |
+| `toPage(x, y)` | Absolute screen point | `page, px, py, zoom, angle`, or `nil`. |
+| `toScreen(page, px, py)` | Native page point | `x, y, zoom, angle`, or `nil`. |
+| `snapshot(bb)` | Screen-sized buffer | Paint your background without Ink Away ink; return value ignored. |
+| `repaint()` | Nothing | Request a viewer repaint; return value ignored. |
+| `clip()` | Nothing | `{x, y, w, h}` in absolute screen pixels, or `nil` when unavailable. |
+
+Keep `zoom` positive; `angle` is clockwise radians. Both mappings report the same
+page-to-screen scale and rotation. Keep mappings valid beyond the clip: clipping
+is separate from mapping. Never retain or free the snapshot buffer. Paint newly
+created widgets before querying their clip. The [rendering example](/docs/integration/rendering-consumer)
+shows a simple pair of mappings.
+
+</details>
+
+## Optional callbacks
+
+A basic viewer can omit these. Add them when you support navigation or changing layouts.
+
+<details>
+<summary>Navigation, viewport changes, and advanced geometry</summary>
+
+Add only the behavior your viewer needs. Supplied methods must be functions.
+
+| Method | Contract | When omitted |
+| --- | --- | --- |
+| `begin()` | Prepare annotation presentation; repeated calls must be safe. Called before open and after handoff. | No extra setup. |
+| `finish()` | Restore presentation and release retained callbacks; tolerate an already-closed viewer. Called on closure or failed activation. | No extra cleanup. |
+| `turn(direction, done, frame)` | Navigate logically: `1` forward, `-1` backward. Call `done(landing_surface)` once, including at a boundary; call optional `frame(surface)` after updating animation geometry. | Stay on the same surface. |
+| `setViewport(rect, refresh)` | Fit the toolbar's available screen rectangle. Return `true` if content widgets changed. Retain `refresh(reflow)` for later synchronous layout changes. | Keep your existing layout. |
+| `readingDirection()` | Return `"ltr"` or `"rtl"` for physical arrows/swipes. Logical next/previous keep their meaning. | Use the reader setting. |
+| `mapPath(points, to_page, page)` | Return a mapped flat `{x1,y1,x2,y2,...}` array. `true` maps screen to page; `false` maps page to screen. Keep input unchanged and insert vertices at discontinuities. | Use affine mapping. |
+| `isAffine()` | Return `false` with `mapPath()` when primitive outlines need mapping into polygons. | No outline conversion. |
+| `regions()` | Return disjoint affine sub-surfaces for reading-ink painting, each with its own pages/key/mappings/clip. An empty array draws no reading ink. | Paint through this surface. |
+
+For navigation, Ink Away saves edits before the turn and blocks editing until
+`done` runs. Keep old mappings usable during movement. `frame` requests repaint;
+only `done` adopts the landing surface. The landing surface must belong to the
+same document. `done(nil)` transfers to the native reader; it does not mean
+"no movement". Invalid handoffs are reported and retain the old surface;
+late or duplicate completions cannot reopen a closed session. Prepare landing
+widgets before completion. A handoff does not automatically call every outgoing
+surface's `finish()`; arrange ownership before destroying an old viewer.
+
+For viewport changes, use the latest `refresh(function() ... end)` **before**
+changing mappings yourself. Ink Away saves against old geometry, runs your
+synchronous reflow, and reloads against new geometry. Do not call `refresh`
+inside `setViewport`; clear it in `finish`. Late calls after closure are ignored.
+
+Discontinuous surfaces can map strokes and primitive outlines. Text, pictures,
+and fills still use local affine placement in the editor; `regions()` only
+controls reading-ink painting. Saved annotations keep native coordinates.
+
+</details>

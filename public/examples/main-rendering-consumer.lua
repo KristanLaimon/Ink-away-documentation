@@ -2,12 +2,12 @@
 -- Rendering consumer: handles both before-ready and after-ready registration.
 -- A plugin may also be an event-only consumer; the roles are independent.
 -- Your own viewer setup supplies ui, viewer_widget and a valid surface. Rendering and
--- surface geometry are deliberately omitted; see Plugin-integration.md.
+-- surface geometry are deliberately omitted; see the rendering-consumer guide.
 local YourPlugin = {}
 
--- MOCK signature: your plugin creates its own viewer and surface.
+-- MOCK helper, called from your own setup: your plugin creates its own viewer and surface.
 -- viewer_widget is that actual KOReader viewer object, not a standard plugin field.
-function YourPlugin:init(ui, viewer_widget, surface)
+function YourPlugin:connectInkAway(ui, viewer_widget, surface)
     self.ui, self.viewer_widget, self.surface = ui, viewer_widget, surface
     self.closed, self.annotation_open = false, false
     self.status = "Waiting for Ink Away"

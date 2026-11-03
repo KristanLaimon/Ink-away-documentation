@@ -1,17 +1,16 @@
 {
   "title": "Public API",
   "pages": [
-    "index",
-    "conventions",
-    "install-plugin-integration",
-    "register-rendering-view",
     "on-annotation-opened",
     "on-annotation-closed",
-    "event-payload",
+    "install-plugin-integration",
+    "register-rendering-view",
     "paint-document-surface",
     "release-document-surface",
     "annotate",
-    "errors",
-    "compatibility"
+    "ready-instance",
+    "pending-integrations",
+    "integration-api-version",
+    "document-surface-version"
   ]
 }

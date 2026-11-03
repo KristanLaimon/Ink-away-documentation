@@ -3,8 +3,6 @@
   "pages": [
     "index",
     "integration",
-    "api",
-    "surfaces",
-    "architecture"
+    "api"
   ]
 }

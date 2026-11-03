@@ -1,0 +1,25 @@
+---
+title: "ink.document_surface_version"
+description: "Check support for the external rendering surface contract."
+---
+
+| Type | Current value |
+| --- | --- |
+| number | `1` |
+
+Read this field; do not overwrite it. Rendering consumers check it alongside
+[`integration_api_version`](/docs/api/integration-api-version).
+
+```lua
+if ink.integration_api_version ~= 1
+        or ink.document_surface_version ~= 1 then
+    return
+end
+```
+
+The surface you provide also needs `surface.version = 1`. That field describes
+your adapter; `ink.document_surface_version` describes what Ink Away supports.
+
+If either version is missing or unsupported, keep your normal viewer behavior.
+Event-only consumers can ignore the surface version. See the
+[rendering example](/docs/integration/rendering-consumer) for the required adapter.

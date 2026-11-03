@@ -1,0 +1,23 @@
+---
+title: "ink.integration_api_version"
+description: "Check support for registration and annotation events."
+---
+
+| Type | Current value |
+| --- | --- |
+| number | `1` |
+
+Read this field; do not overwrite it. Check it inside `configureInkAway` before using event subscriptions or rendering
+registration. This number identifies the interface, not the Ink Away release.
+
+```lua
+function YourPlugin:configureInkAway(ink)
+    if ink.integration_api_version ~= 1 then return end
+    -- Subscribe to events or register your rendering provider here.
+end
+```
+
+Missing or unsupported values mean your plugin should skip integration and
+continue normally. For compatibility with unusual builds, also check that the
+methods you use are functions. Event-only consumers do not need
+[`document_surface_version`](/docs/api/document-surface-version).
